@@ -1,20 +1,22 @@
 `timescale 1ns/1ps
-module tb_top();
+module testbench();
 
 // 参数重定义
-parameter FIFO_DEPTH = 8;
-parameter FIFO_WIDTH = 16;
+parameter FIFO_ADDRWIDTH =3;
+parameter FIFO_DATAWIDTH = 16;
 
+localparam GREY_CODE_WIDTH = FIFO_ADDRWIDTH+1;
+localparam FIFO_DEPTH = (2>>(GREY_CODE_WIDTH-1));
 // 接口声明
 reg                      rst;
 reg                      wr_clk;
 reg                      wr_en;
-reg     [FIFO_WIDTH-1:0] din;
+reg     [FIFO_DATAWIDTH-1:0] din;
 wire                     full;
 
 reg                      rd_clk;
 reg                      rd_en;
-wire    [FIFO_WIDTH-1:0] dout;
+wire    [FIFO_DATAWIDTH-1:0] dout;
 wire                     empty;
 
 // 时钟参数
@@ -24,12 +26,12 @@ localparam RD_CLK_PERIOD = 15; // ~66.6MHz读时钟
 // 测试控制变量
 integer write_count = 0;
 integer read_count = 0;
-reg [FIFO_WIDTH-1:0] data_queue[$]; // 数据验证队列
+reg [FIFO_DATAWIDTH-1:0] data_queue[$]; // 数据验证队列
 
 // 实例化被测模块
-top #(
-    .FIFO_DEPTH(FIFO_DEPTH),
-    .FIFO_WIDTH(FIFO_WIDTH)
+asynchronous_fifo #(
+	.FIFO_ADDRWIDTH(FIFO_ADDRWIDTH),
+    .FIFO_DATAWIDTH(FIFO_DATAWIDTH)
 ) dut (
     .rst(rst),
     .wr_clk(wr_clk),
@@ -75,7 +77,7 @@ begin
         @(posedge wr_clk);
         #1; // 建立时间
         wr_en = 1;
-        din = $urandom_range(0, (1<<FIFO_WIDTH)-1);
+        din = $urandom_range(0, (1<<FIFO_DATAWIDTH)-1);
         data_queue.push_back(din);
         write_count++;
         @(posedge wr_clk);
@@ -88,7 +90,7 @@ endtask
 // 读操作任务
 task automatic read_transaction;
     input integer num;
-    reg [FIFO_WIDTH-1:0] expected;
+    reg [FIFO_DATAWIDTH-1:0] expected;
 begin
     repeat(num) begin
         @(posedge rd_clk);
